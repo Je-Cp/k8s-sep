@@ -1,0 +1,234 @@
+# Name of the k8s Secret holding the Starburst License file
+starburstPlatformLicense: starburstdata
+
+environment: spead
+# sharedSecret to be generated with 
+# openssl rand 512 | base64
+sharedSecret: xxxxx
+
+image:
+  repository: "starburstdata/starburst-enterprise"
+  tag: "53065ddc-423-e.1"
+  # tag: "413-e.1"
+  # pullPolicy: "IfNotPresent"
+  pullPolicy: "Always"
+
+expose:
+  type: "loadBalancer"
+  loadBalancer:
+    name: "starburst-lb"
+    ports:
+      http:
+        port: 8080
+      https:
+        port: 8443
+
+
+
+coordinator:
+  envFrom:
+  - secretRef:
+      name: vars
+  resources:
+    requests:
+      memory: "48Gi"
+      cpu: 10
+    limits:
+      memory: "48Gi"
+      cpu: 10
+  etcFiles:
+    properties:
+      log.properties: |
+        io.trino=DEBUG
+        io.trino.server.security.oauth2=DEBUG
+
+      cache.properties: |
+        service-database.user=${ENV:PSQL_USERNAME}
+        service-database.password=${ENV:PSQL_PASSWORD}
+        service-database.jdbc-url=jdbc:postgresql://xxx:5432/cache
+        starburst.user=xxx
+        starburst.password=xxx
+        starburst.jdbc-url=jdbc:trino://coordinator:8443?SSL=true&SSLVerification=NONE
+        # type-mapping=FILE
+        # type-mapping.file=secretRef:type-mapping:type-mapping.json
+        # rules.file=secretRef:cache-rules:cache-rules.json
+        # rules.refresh-period=1m
+        # refresh-initial-delay=1m
+        # refresh-interval=2m
+      password-authenticator.properties: |
+        password-authenticator.name=ldap
+        ldap.allow-insecure=true
+        ldap.url=ldap://xxx:389
+        ldap.user-bind-pattern=${USER}@xxx
+        ldap.bind-dn=xxx@sxxx
+        ldap.bind-password=xxx
+        ldap.group-auth-pattern=(&(objectClass=person)(sAMAccountName=${USER})(memberof=CN=xxx,OU=xx,OU=xx,OU=xx,DC=xx,DC=xx,DC=xx,DC=xx))
+        ldap.user-base-dn=OU=xx,OU=xx,OU=xx,DC=xx,DC=xx,DC=xx,DC=xx
+      group-provider.properties: |
+        group-provider.name=ldap
+        ldap.ssl=false
+        ldap.url=ldap://xx:389
+        ldap.user=CN=xx,OU=xx,OU=xx,DC=xx,DC=xx,DC=xx,DC=xx
+        ldap.password=xx
+        ldap.search-base=OU=xx,OU=xx,OU=xx,DC=xx,DC=xx,DC=xx,DC=xx
+        ldap.group.search-filter=(&(objectClass=group)
+        ldap.group.member-attribute=member
+        ldap.group.name-attribute=cn
+        ldap.user.member-of-attribute=memberOf
+        ldap.user.search-filter=(&(objectClass=person)(sAMAccountName={0}))
+        ldap.cache-ttl=10s
+        ldap.negative-cache-ttl=30s
+      # resource-groups.properties: |
+      #   resource-groups.configuration-manager=file
+      #   resource-groups.config-file=etc/resource-groups.json
+    # other:
+    #   resource-groups.json: |
+    #     {
+    #       "rootGroups": [
+    #         {
+    #           "name": "admin",
+    #           "softMemoryLimit": "90%",
+    #           "hardConcurrencyLimit": 10,
+    #           "maxQueued": 10,
+    #           "schedulingPolicy": "weighted_fair",
+    #           "jmxExport": true
+    #         }
+    #       ],
+    #       "selectors": [
+    #         {
+    #           "group": "admin"
+    #         }
+    #       ],
+    #       "cpuQuotaPeriod": "1h"
+    #     }
+  additionalProperties: |
+    internal-communication.shared-secret=xxxxx
+    http-server.authentication.type=PASSWORD
+    http-server.authentication.allow-insecure-over-http=false
+    http-server.process-forwarded=true
+    insights.persistence-enabled=true
+    insights.metrics-persistence-enabled=true
+    insights.jdbc.url=jdbc:postgresql://XXX:5432/insights
+    insights.jdbc.user=${ENV:PSQL_USERNAME}
+    insights.jdbc.password=${ENV:PSQL_PASSWORD}
+
+    usage-metrics.gathering.initial-delay=120s
+
+    starburst.config-validation.enabled=false
+
+    starburst.access-control.enabled=true
+    starburst.access-control.authorized-users=admin
+    starburst.access-control.audit.enabled=true
+
+    starburst.data-product.enabled=true
+    data-product.starburst-jdbc-url=jdbc:trino://coordinator:8443?SSL=true&SSLVerification=NONE
+    data-product.starburst-user=xxx
+    data-product.starburst-password=xxx
+
+    exchange.http-client.request-timeout=60s
+    node-manager.http-client.request-timeout=60s
+    discovery.http-client.request-timeout=60s
+
+
+  # affinity:
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #       - matchExpressions:
+  #         - key: apps
+  #           operator: In
+  #           values:
+  #           - sep
+
+worker:
+  envFrom:
+  - secretRef:
+      name: vars
+  replicas: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 80 # Default is 80 but for demo and testing you can set this lower to something like 50.
+
+  resources:
+    requests:
+      memory: "48Gi"
+      cpu: 10
+    limits:
+      memory: "4Gi"
+      cpu: 10
+  deploymentTerminationGracePeriodSeconds: 10 # Addin these 2 options to spead upp new helm upgarade
+  starburstWorkerShutdownGracePeriodSeconds: 6 # 2 minutes
+  additionalProperties: |  
+    internal-communication.shared-secret=xxx
+    internal-communication.https.required=true
+    http-server.https.enabled=true
+    
+    node-scheduler.include-coordinator=false
+
+    # node-scheduler.max-splits-per-node=4096
+    # node-scheduler.max-unacknowledged-splits-per-task=1024
+    # node-scheduler.min-pending-splits-per-task=512
+    # node-scheduler.max-adjusted-pending-splits-per-task=1024
+    
+    exchange.http-client.request-timeout=60s
+    node-manager.http-client.request-timeout=60s
+    discovery.http-client.request-timeout=60s
+
+  # affinity:
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #       - matchExpressions:
+  #         - key: apps
+  #           operator: In
+  #           values: 
+  #           - sep
+
+catalogs:
+  tpch: | 
+    connector.name=tpch
+  memory: | 
+    connector.name=memory
+  jmx: | 
+    connector.name=jmx
+  bigquery: |
+    connector.name=bigquery
+    bigquery.project-id=xxx
+    bigquery.credentials-file=secretRef:gcs-keyfile:key.json
+    bigquery.query-results-cache.enabled=true
+    bigquery.case-insensitive-name-matching=true
+    bigquery.views-enabled=true
+    bigquery.experimental.arrow-serialization.enabled=true
+    # bigquery.project-prefix-for-schema.enabled=true
+    bigquery.metadata.cache-ttl=60m
+    bigquery.rpc-proxy.enabled=true
+    bigquery.rpc-proxy.uri=xxx
+    bigquery.rpc-proxy.username=xxx
+    bigquery.rpc-proxy.password=xxx
+    # bigquery.rpc-proxy.keystore-path=xxx
+    # bigquery.rpc-proxy.keystore-password=xxx
+    # bigquery.rpc-proxy.truststore-path=xxx
+    # bigquery.rpc-proxy.truststore-password=xxx
+
+  bigquery_oauth: |
+    connector.name=bigquery 
+    bigquery.project-id=xxx
+    bigquery.authentication.type=token_pass_through
+    bigquery.authentication.idp-name=gmail
+    bigquery.query-results-cache.enabled=true
+    bigquery.case-insensitive-name-matching=true
+    bigquery.views-enabled=true
+    bigquery.metadata.cache-ttl=60m
+    bigquery.experimental.arrow-serialization.enabled=true
+    # bigquery.project-prefix-for-schema.enabled=true
+        bigquery.metadata.cache-ttl=60m
+    bigquery.rpc-proxy.enabled=true
+    bigquery.rpc-proxy.uri=xxx
+    bigquery.rpc-proxy.username=xxx
+    bigquery.rpc-proxy.password=xxx
+    # bigquery.rpc-proxy.keystore-path=xxx
+    # bigquery.rpc-proxy.keystore-password=xxx
+    # bigquery.rpc-proxy.truststore-path=xxx
+    # bigquery.rpc-proxy.truststore-password=xxx

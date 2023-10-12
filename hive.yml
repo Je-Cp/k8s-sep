@@ -1,0 +1,14 @@
+database:
+  type: external
+  external:
+    jdbcUrl: "jdbc:postgresql://XXX:5432/hms"
+    driver: "org.postgresql.Driver"
+    user: postgres
+    password: xxx
+
+
+hiveMetastoreWarehouseDir: hdfs://xxxxx
+
+hdfs:
+  hadoopUserName:: xxx
+

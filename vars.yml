@@ -1,0 +1,13 @@
+# To add new encoded strings or know what was encoded run the commands below.
+# encode with: echo -n <what-you-want-to-encode> | base64
+# decode with: echo -n <encoded-string> | base64 --decode
+#
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vars
+type: Opaque
+# echo -n xxx | base64
+data:
+  PSQL_USERNAME: xxx
+  PSQL_PASSWORD: xxx

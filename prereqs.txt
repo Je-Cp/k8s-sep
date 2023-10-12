@@ -1,0 +1,20 @@
+1) Need a postgresql/mysql instance with at least a database named "insights"
+
+2) Need to use helm cli
+https://docs.starburst.io/latest/k8s/requirements.html#helm-chart-repository
+
+helm repo add \
+  --username xxx \
+  --password xxx \
+  --pass-credentials \
+  starburstdata \
+  https://harbor.starburstdata.net/chartrepo/starburstdata
+
+  then 
+
+  helm repo update
+
+  3) update sep_install.yml to set correct postgresql/mysql insights connectionstring and user/password
+
+  4) on you k8s, create a secret with licence
+  kubectl create secret generic starburstdata --from-file starburstdata.license

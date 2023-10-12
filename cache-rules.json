@@ -1,0 +1,17 @@
+
+{
+    "defaultGracePeriod": "5m",
+    "defaultMaxImportDuration": "4m",
+    "defaultCacheCatalog": "datalake",
+    "defaultCacheSchema": "cache",
+   
+    "rules": [
+        {
+            "catalogName": "tpch",
+            "schemaName": "tiny",
+            "tableName": "orders",
+            "refreshInterval": "5m"
+           
+        }
+    ]
+}

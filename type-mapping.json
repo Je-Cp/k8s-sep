@@ -1,0 +1,11 @@
+{
+    "rules": {
+      "datalake": {
+        "timestamp(0)": "timestamp",
+        "decimal(18, 0)": "varchar",
+        "decimal(3, 0)": "double",
+        "decimal(18, 2)": "double",
+        "varchar(16777216)":"VARCHAR(65535)" 
+      }
+    }
+  }
